@@ -1,0 +1,12 @@
+---
+title: "p8105 midterm project"
+author: 'Zanis Fang, UID: ZF2213'
+date: "10/16/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+wordcountaddin::text_stats("p8105_mtp_zf2213.Rmd")
+```
+
