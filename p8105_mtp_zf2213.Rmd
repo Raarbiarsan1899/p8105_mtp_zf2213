@@ -24,6 +24,7 @@ the dataset is 1440 recorded activities, one activity every one minutes, across 
 There are 329 days.
 
 ```{r}
+# do some tidy
 acc_tidy <- acc %>% 
 	# get the "second" of a day
 	mutate(time_activity = str_replace(time_activity, "activity.", "")) %>% 
@@ -50,6 +51,58 @@ acc_tidy %>%
 	  )
 ```
 
+```{r sub_group}
+# take a look at activity distribution
+acc_tidy %>% ggplot(aes(x = accel)) +
+	geom_density() +
+	scale_x_log10(breaks = 2^c(1:500)) +
+	theme(axis.text.x = element_text(angle = 90))
+
+# subgroup range of activity 
+acc_subgroup <- acc_tidy %>% mutate(range_accel = cut(accel, c(0, 8, 16, Inf),
+																			labels = c("low", "middle", "high")),
+																		day_of_period = as.integer(day) * week
+																		) 
+
+# across a day
+acc_subgroup %>%
+	group_by(time_activity, range_accel) %>% 
+	summarize(mean_activity = mean(accel)) %>% 
+	ggplot(aes(x = time_activity, y = log(mean_activity), group = range_accel, color = range_accel)) +
+	  geom_line() +
+	  facet_grid(. ~ range_accel)
+
+# middle and low fraction are fluctrating
+
+# across day of the period, mean
+acc_subgroup %>%
+	group_by(day_of_period, range_accel) %>% 
+	summarize(mean_activity = mean(accel)) %>% 
+	ggplot(aes(x = day_of_period, y = log(mean_activity), group = range_accel, color = range_accel)) +
+	  geom_line() +
+	  facet_grid(. ~ range_accel)
+
+# across day of the period, sum
+acc_subgroup %>%
+	group_by(day_of_period, range_accel) %>% 
+	summarize(sum_activity = sum(accel)) %>% 
+	ggplot(aes(x = day_of_period, y = log(sum_activity), group = range_accel, color = range_accel)) +
+	  geom_line() +
+	  geom_smooth() +
+	  facet_grid(. ~ range_accel)
+
+# across day of the period, sum not log
+acc_subgroup %>%
+	group_by(day_of_period, range_accel) %>% 
+	summarize(sum_activity = sum(accel)) %>% 
+	ggplot(aes(x = day_of_period, y = sum_activity, group = range_accel, color = range_accel)) +
+	  geom_line() +
+	  geom_smooth() +
+	  facet_grid(. ~ range_accel)
+
+```
+
+
 ```{r}
 # get activity during a day
 acc_tidy %>%
@@ -57,6 +110,14 @@ acc_tidy %>%
 	summarize(sum_accel = sum(accel)) %>% 
 	ggplot(aes(x = time_activity, y = sum_accel)) +
 	  geom_point() +
+	  labs(
+	  	x = "Time of a day",
+	  	y = "Sum of counts"
+	  )
+
+acc_tidy %>%
+	ggplot(aes(x = time_activity, y = accel)) +
+	  geom_boxplot() +
 	  labs(
 	  	x = "Time of a day",
 	  	y = "Sum of counts"
@@ -76,6 +137,9 @@ acc_tidy %>%
 
 it seems there are two "types" of activity, low intensity activity, such as sleep, sit, etc, and high intensity activity, such as walk, run, climb stairs, etc.
 
+```{r}
+
+```
 
 
 
