@@ -33,17 +33,17 @@ acc_tidy <- acc %>%
 	mutate(hour = time_activity %/% 60, minute = time_activity %% 60) %>% 
 	# relevel day variable
 	mutate(day = forcats::fct_relevel(day, c("Sunday", "Monday", "Tuesday",
-																					 "Wednesday", "Thursday", "Friday", "Saturday")))
+																					 "Wednesday", "Thursday", "Friday", "Saturday"))) %>% 
+	mutate(day_of_period = (week - 1) * 7 + as.integer(day))
 	
 ```
 
 ```{r}
 # activity over all followup period
-acc_tidy %>%
-	mutate(day_of_year = week * as.integer(day)) %>% 
-	group_by(day_of_year) %>% 
+acc_tidy %>% 
+	group_by(day_of_period) %>% 
 	summarize(sum_accel = sum(accel)) %>% 
-	ggplot(aes(x = day_of_year, y = sum_accel)) +
+	ggplot(aes(x = day_of_period, y = sum_accel)) +
 	  geom_point() +
 	  labs(
 	  	x = "Day",
@@ -51,20 +51,55 @@ acc_tidy %>%
 	  )
 ```
 
+
 ```{r sub_group}
 # take a look at activity distribution
 acc_tidy %>% ggplot(aes(x = accel)) +
 	geom_density() +
-	scale_x_log10(breaks = 2^c(1:500)) +
+	scale_x_log10(breaks = 2^c(1:12)) +
 	theme(axis.text.x = element_text(angle = 90))
+```
+
+
+
+it seems there are two "types" of activity, low intensity activity, such as sleep, sit, etc, and high intensity activity, such as walk, run, climb stairs, etc.
+
+```{r pool}
+# across a day, log, mean
+acc_tidy %>%
+	group_by(time_activity) %>% 
+	summarize(mean_activity = mean(accel)) %>% 
+	ggplot(aes(x = time_activity, y = log(mean_activity))) +
+	  geom_line()
+
+# across a day, mean
+acc_tidy %>%
+	group_by(time_activity) %>% 
+	summarize(mean_activity = mean(accel)) %>% 
+	ggplot(aes(x = time_activity, y = mean_activity)) +
+	  geom_line()
+
+# across day of period
+acc_tidy %>%
+	group_by(day_of_period) %>% 
+	summarize(mean_activity = mean(accel), sum_activity = sum(accel)) %>%
+	gather(key = "type", value = "accel", mean_activity, sum_activity) %>%
+	ggplot(aes(x = day_of_period, y = accel, color = type)) +
+	  geom_line() +
+	  geom_smooth()
+
+```
+
+
+```{r cutoff}
 
 # subgroup range of activity 
 acc_subgroup <- acc_tidy %>% mutate(range_accel = cut(accel, c(0, 8, 16, Inf),
 																			labels = c("low", "middle", "high")),
-																		day_of_period = as.integer(day) * week
+																		day_of_period = as.integer(day) + week * 7
 																		) 
 
-# across a day
+# across a day, mean
 acc_subgroup %>%
 	group_by(time_activity, range_accel) %>% 
 	summarize(mean_activity = mean(accel)) %>% 
@@ -100,46 +135,22 @@ acc_subgroup %>%
 	  geom_smooth() +
 	  facet_grid(. ~ range_accel)
 
+# across week
+acc_subgroup %>%
+	group_by(day, range_accel) %>% 
+	summarize(sum_activity = sum(accel)) %>% 
+	ggplot(aes(x = day, y = sum_activity, group = range_accel, color = range_accel)) +
+	  geom_line() +
+	  geom_smooth() +
+	  facet_grid(. ~ range_accel)
+
+# across week X day
+acc_subgroup %>%
+	group_by(day, day_of_period, range_accel) %>% 
+	summarize(sum_activity = sum(accel)) %>% 
+	ggplot(aes(x = day_of_period, y = sum_activity, group = range_accel, color = range_accel)) +
+	  geom_line() +
+	  geom_smooth() +
+	  facet_grid(. ~ day)
 ```
-
-
-```{r}
-# get activity during a day
-acc_tidy %>%
-	group_by(time_activity) %>% 
-	summarize(sum_accel = sum(accel)) %>% 
-	ggplot(aes(x = time_activity, y = sum_accel)) +
-	  geom_point() +
-	  labs(
-	  	x = "Time of a day",
-	  	y = "Sum of counts"
-	  )
-
-acc_tidy %>%
-	ggplot(aes(x = time_activity, y = accel)) +
-	  geom_boxplot() +
-	  labs(
-	  	x = "Time of a day",
-	  	y = "Sum of counts"
-	  )
-```
-
-```{r}
-# get activity during a week
-acc_tidy %>%
-	ggplot(aes(x = day, y = log(accel))) +
-	  geom_violin() +
-	  labs(
-	  	x = "Day of a week",
-	  	y = "Sum of counts"
-	  )
-```
-
-it seems there are two "types" of activity, low intensity activity, such as sleep, sit, etc, and high intensity activity, such as walk, run, climb stairs, etc.
-
-```{r}
-
-```
-
-
 
