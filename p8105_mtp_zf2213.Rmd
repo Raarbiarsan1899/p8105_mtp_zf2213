@@ -7,6 +7,23 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-wordcountaddin::text_stats("p8105_mtp_zf2213.Rmd")
+
+library(tidyverse)
 ```
+
+### loading data
+
+```{r}
+acc <- read_csv("./data/p8105_mtp_data.csv")
+acc <- acc %>% gather(key = "activity", value = "acc", activity.1:activity.1440)
+```
+
+the dataset is 1440 recorded activities, one activity every one minutes, across the day.
+
+THere are 329 days.
+
+```{r}
+
+```
+
 
