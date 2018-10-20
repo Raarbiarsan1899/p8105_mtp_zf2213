@@ -11,30 +11,40 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
+**three or four figures would be enough**
+
 ### loading data
 
-```{r}
+Columns are values rather than variables, load data and gather the columns
+
+```{r loading_data}
 # loading data and make to tall table
-acc <- read_csv("./data/p8105_mtp_data.csv")
-acc <- acc %>% gather(key = "time_activity", value = "accel", activity.1:activity.1440)
+acc <- read_csv("./data/p8105_mtp_data.csv") %>% 
+	# gather into long table
+	gather(key = "time_activity", value = "accel", activity.1:activity.1440)
 ```
 
-the dataset is 1440 recorded activities, one activity every one minutes, across the day.
+The dataset records every minute in a day. There are in total 329 days.
 
-There are 329 days.
+### Data tidying
 
+1. Get the nth minute of a day
+2. 
 ```{r}
 # do some tidy
-acc_tidy <- acc %>% 
-	# get the "second" of a day
+acc <- acc %>% 
+	# get the "minute" of a day, 
 	mutate(time_activity = str_replace(time_activity, "activity.", "")) %>% 
+	# change to integer
 	mutate(time_activity = as.integer(time_activity)) %>% 
-	# floor division get minute and hour
+	# floor division get hour:minute of each day
 	mutate(hour = time_activity %/% 60, minute = time_activity %% 60) %>% 
-	# relevel day variable
+	# make day variable factor and relevel the day variable
 	mutate(day = forcats::fct_relevel(day, c("Sunday", "Monday", "Tuesday",
-																					 "Wednesday", "Thursday", "Friday", "Saturday"))) %>% 
-	mutate(day_of_period = (week - 1) * 7 + as.integer(day))
+																					 "Wednesday", "Thursday",
+																					 "Friday", "Saturday"))) %>% 
+	# assuming the start of the first week is Sunday
+	mutate(day_of_period = (week - 1) * 7 + as.integer(day)) %>% View
 	
 ```
 
@@ -107,6 +117,22 @@ acc_subgroup %>%
 	  geom_line() +
 	  facet_grid(. ~ range_accel)
 
+# across a day, sum
+acc_subgroup %>%
+	group_by(time_activity, range_accel) %>% 
+	summarize(sum_activity = sum(accel)) %>% 
+	ggplot(aes(x = time_activity, y = log(sum_activity), group = range_accel, color = range_accel)) +
+	  geom_line() +
+	  facet_grid(. ~ range_accel)
+
+# across a day, middle
+acc_tidy %>%
+	filter(accel > 8, accel < 64) %>%
+	group_by(time_activity) %>% 
+	summarize(sum_activity = sum(accel)) %>% 
+	ggplot(aes(x = time_activity, y = sum_activity)) +
+	  geom_line()
+
 # middle and low fraction are fluctrating
 
 # across day of the period, mean
@@ -133,7 +159,8 @@ acc_subgroup %>%
 	ggplot(aes(x = day_of_period, y = sum_activity, group = range_accel, color = range_accel)) +
 	  geom_line() +
 	  geom_smooth() +
-	  facet_grid(. ~ range_accel)
+	  facet_grid(. ~ range_accel) +
+	  ylim(0, 2000)
 
 # across week
 acc_subgroup %>%
@@ -153,4 +180,22 @@ acc_subgroup %>%
 	  geom_smooth() +
 	  facet_grid(. ~ day)
 ```
+
+```{r}
+acc_subgroup %>% 
+	arrange(day_of_period)
+a <- which(acc_subgroup$range_accel == "middle")
+
+for (i in 1:10) {
+     print(count(acc_subgroup[a + i, ], range_accel))
+	}
+	
+count(acc_subgroup[a + 2, ], range_accel)
+count(acc_subgroup[a + 3, ], range_accel)
+
+
+count(acc_subgroup[a - 1, ], range_accel)
+
+```
+
 
