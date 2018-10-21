@@ -71,9 +71,7 @@ It seems there are two "types" of activity, low intensity activity, such as slee
 ```{r cutoff}
 
 # subgroup range of activity 
-acc <- acc %>% mutate(range_accel = cut(accel, c(0, 8, 32, Inf), labels = c(1:3)),
-											day_of_period = as.integer(day) + week * 7
-											) 
+acc <- acc %>% mutate(range_accel = cut(accel, c(0, 8, 32, Inf), labels = c(1:3))) 
 acc %>% count(range_accel)
 ```
 
@@ -89,6 +87,12 @@ acc %>%
 	ggplot(aes(x = time_activity, y = sum_activity / group_mean, color = range_accel)) +
 	  geom_line() +
 	  facet_grid(range_accel ~ .)
+
+# display activities each day using 2d density plot
+acc %>%
+	mutate(range_accel = cut(accel, c(0, 8, 32, 64, 128, 256, Inf), labels = c(1:6))) %>% 
+	ggplot(aes(x = time_activity, y = day_of_period, color = as.numeric(range_accel))) +
+	  geom_point()
 
 # across day of the period
 acc %>%
