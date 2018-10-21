@@ -73,7 +73,7 @@ The following analysis are based on these three types of activities.
 ```{r cutoff}
 
 # subgroup range of activity 
-acc <- acc %>% mutate(range_accel = cut(accel, c(0, 8, Inf), labels = c("sedentary", "active"))) 
+acc <- acc %>% mutate(range_accel = cut(accel, c(0, 8, Inf), labels = c("sed", "active"))) 
 acc %>% count(range_accel)
 ```
 
