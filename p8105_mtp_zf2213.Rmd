@@ -88,6 +88,17 @@ acc %>%
 	  geom_line() +
 	  facet_grid(range_accel ~ .)
 
+# across day + week, mean
+acc %>%
+	group_by(time_activity, day, range_accel) %>% 
+	summarize(sum_activity = sum(accel)) %>%
+	group_by(range_accel) %>% 
+	# get mean of sum_activity for each group for normalization
+	mutate(group_mean = mean(sum_activity)) %>% 
+	ggplot(aes(x = time_activity, y = sum_activity / group_mean, color = range_accel)) +
+	  geom_line() +
+	  facet_grid(range_accel ~ day)
+
 # display activities each day using 2d density plot
 acc %>%
 	mutate(range_accel = cut(accel, c(0, 8, 32, 64, 128, 256, Inf), labels = c(1:6))) %>% 
