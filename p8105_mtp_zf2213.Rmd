@@ -128,6 +128,11 @@ acc %>%
 	ggplot(aes(x = day, y = sum_activity / group_mean, group = range_accel, color = range_accel)) +
 	  geom_line()
 
+# across week, show the distribution of activities for each day in a week
+acc %>%
+	ggplot(aes(x = log(accel), color = day)) +
+	  geom_density()
+
 
 # across day of the period + week, mean
 acc %>%
