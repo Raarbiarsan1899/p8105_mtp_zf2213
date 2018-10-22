@@ -19,12 +19,14 @@ Columns are values rather than variables, load data and gather the columns
 
 ```{r loading_data}
 # loading data and make to tall table
-acc <- read_csv("./data/p8105_mtp_data.csv") %>% 
+activity <- read_csv("./data/p8105_mtp_data.csv") %>% 
 	# gather into long table
-	gather(key = "time_activity", value = "accel", activity.1:activity.1440)
+	gather(key = "minute_in_day", value = "counts", activity.1:activity.1440)
 ```
 
 The dataset records every minute in a day. There are in total 329 days.
+
+(Write more about dataset, make variable name more reasonable)
 
 ### Data tidying
 
@@ -32,21 +34,80 @@ The dataset records every minute in a day. There are in total 329 days.
 
 ```{r}
 # do some tidy
-acc <- acc %>% 
+activity <- activity %>% 
 	# get the "minute" of a day, 
-	mutate(time_activity = str_replace(time_activity, "activity.", "")) %>% 
+	mutate(minute_in_day = str_replace(minute_in_day, "activity.", "")) %>% 
 	# change to integer
-	mutate(time_activity = as.integer(time_activity)) %>% 
+	mutate(minute_in_day = as.integer(minute_in_day)) %>% 
 	# floor division get hour:minute of each day
-	mutate(hour = time_activity %/% 60, minute = time_activity %% 60) %>% 
-	# make day variable factor and relevel the day variable
-	mutate(day = forcats::fct_relevel(day, c("Sunday", "Monday", "Tuesday",
-																					 "Wednesday", "Thursday",
-																					 "Friday", "Saturday"))) %>% 
+	mutate(hour_in_day = minute_in_day %/% 60, minute_in_hour = minute_in_day %% 60) %>% 
+	# make day in week variable factor and relevel the day variable
+	rename(day_in_week = day) %>%
+	mutate(day_in_week = forcats::fct_relevel(day_in_week, c("Sunday", "Monday",
+																													 "Tuesday", "Wednesday",
+																													 "Thursday", "Friday",
+																													 "Saturday"))) %>% 
 	# assuming the start of the first week is Sunday
-	mutate(day_of_period = (week - 1) * 7 + as.integer(day))
-	
+	mutate(day = (week - 1) * 7 + as.integer(day_in_week)) %>% 
+	# range the variable
+	select(day, week, day_in_week, hour_in_day, minute_in_hour, minute_in_day, counts)
+
 ```
+
+### Across the day
+
+```{r}
+activity_day_total <- activity %>% 
+# aggregate across minutes to create total activity
+	group_by(day, day_in_week, week) %>% 
+  summarize(day_total = sum(counts))
+
+# day total counts over time
+activity_day_total %>%
+	ggplot(aes(x = day, y = day_total)) +
+	  geom_line() +
+	  geom_smooth()
+
+# distribution of day total in every day in week
+activity_day_total %>%
+	ggplot(aes(x = day_in_week, y = day_total)) +
+	  geom_boxplot()
+
+# across week, show the distribution of activities for each day in a week
+activity_day_total %>%
+	ggplot(aes(y = day_total, x = day, color = day_in_week)) +
+	  geom_point() +
+	  facet_grid(. ~ day_in_week)
+
+
+
+# across day of the period + week, mean
+acc %>%
+	group_by(day_of_period, day, range_accel) %>% 
+	summarize(sum_activity = sum(accel)) %>%
+	group_by(range_accel) %>% 
+	# get mean of sum_activity for each group for normalization
+	mutate(group_mean = mean(sum_activity)) %>% 
+	ggplot(aes(x = day_of_period, y = sum_activity / group_mean, color = range_accel)) +
+	  geom_line() +
+	  geom_smooth() +
+	  facet_grid(range_accel ~ day)
+
+# percentage of time remains sedentary 
+acc %>%
+	group_by(day_of_period, day, range_accel) %>%
+	summarize(sum_activity = n()) %>%
+	spread(key = range_accel, value = sum_activity, fill = 0) %>% 
+	mutate(prop_active = active / (sed + active)) %>%
+	ggplot(aes(x = day_of_period, y = prop_active)) +
+	  geom_line() +
+	  geom_smooth() +
+	  facet_grid(. ~ day)
+
+```
+
+
+(reate a total activity variable)
 
 ### Get distribution of the data
 
@@ -103,9 +164,21 @@ acc %>%
 
 # display activities each day using 2d density plot
 acc %>%
-	mutate(range_accel = cut(accel, c(0, 8, 32, 64, 128, 256, Inf), labels = c(1:6))) %>% 
-	ggplot(aes(x = time_activity, y = day_of_period, color = as.numeric(range_accel))) +
-	  geom_point(size = 0.1, alpha = 0.5)
+	ggplot(aes(x = time_activity, y = day_of_period, color = log10(accel))) +
+	  geom_point(size = 0.1, alpha = 0.5) +
+	  viridis::scale_color_viridis(
+	  	name = "Location",
+	  	discrete = FALSE
+	  )
+
+acc %>%
+	ggplot(aes(x = time_activity, y = week, color = log10(accel))) +
+	  geom_point(size = 0.1, alpha = 0.5) +
+	  facet_grid(day ~ .) +
+	  viridis::scale_color_viridis(
+	  	name = "Location",
+	  	discrete = FALSE
+	  )
 
 # across day of the period
 acc %>%
@@ -130,8 +203,9 @@ acc %>%
 
 # across week, show the distribution of activities for each day in a week
 acc %>%
-	ggplot(aes(x = log(accel), color = day)) +
-	  geom_density()
+	ggplot(aes(y = log(accel), color = day)) +
+	  geom_boxplot() +
+	  facet_grid(range_accel ~ .)
 
 
 # across day of the period + week, mean
@@ -145,6 +219,17 @@ acc %>%
 	  geom_line() +
 	  geom_smooth() +
 	  facet_grid(range_accel ~ day)
+
+# percentage of time remains sedentary 
+acc %>%
+	group_by(day_of_period, day, range_accel) %>%
+	summarize(sum_activity = n()) %>%
+	spread(key = range_accel, value = sum_activity, fill = 0) %>% 
+	mutate(prop_active = active / (sed + active)) %>%
+	ggplot(aes(x = day_of_period, y = prop_active)) +
+	  geom_line() +
+	  geom_smooth() +
+	  facet_grid(. ~ day)
 
 ```
 
