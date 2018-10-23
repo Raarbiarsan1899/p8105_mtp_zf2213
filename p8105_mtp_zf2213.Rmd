@@ -6,8 +6,15 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+ echo = TRUE,
+ fig.width = 8,
+ # fig proportion set to golden ratio
+ fig.asp = 0.618,
+ out.width = "100%"
+)
 
+# ggplot2 tibble dplyr tidyr ... etc.
 library(tidyverse)
 
 ```
@@ -59,8 +66,8 @@ activity_day_total <- activity %>%
 # day total counts over time
 activity_day_total %>%
 	ggplot(aes(x = day, y = day_total)) +
-	  geom_line() +
-	  geom_smooth()
+	  geom_point(aes(color = day_in_week)) +
+	  geom_smooth(method = lm)
 
 # distribution of day total in every day in week
 activity_day_total %>%
@@ -83,44 +90,20 @@ activity_day_total %>%
 ```{r}
 # display 24-hour profile for each day using 2d density plot
 activity %>%
-	ggplot(aes(x = minute_in_day, y = day, color = log10(counts))) +
+	ggplot(aes(y = minute_in_day, x = day, color = log10(counts))) +
 	  geom_point(size = 0.1, alpha = 0.5) +
+	  scale_x_continuous(breaks = c(1, 55, 92, 107, 185, 243, 300, 329)) +
 	  viridis::scale_color_viridis(
 	  	name = "Location",
 	  	discrete = FALSE
 	  )
 
+# refer to supplementary material for special days
 ```
 
 
-### Get distribution of the data
 
-
-```{r sub_group}
-# take a look at activity distribution
-activity %>% ggplot(aes(x = counts)) +
-	geom_density() +
-	scale_x_log10(breaks = 2^c(1:12)) +
-	theme(axis.text.x = element_text(angle = 90))
-
-
-```
-
-It would be unreasonable to take the average of signals across time.
-
-It seems there are two "types" of activity, low intensity activity, such as sleep, sit, etc, and high intensity activity, such as walk, run, climb stairs, etc. And there is a middle type activity. However, the middle type of activities are low in number, so merge it into high intensity activity. Actually, the high intensity activities are wide in range.
-
-The following analysis are based on these two types of activities.
-
-```{r}
-
-# subgroup range of activity 
-activity <- activity %>%
-	mutate(activity_type = cut(counts, c(0, 8, Inf), labels = c("sedentary", "active"))) 
-
-activity %>% count(activity_type)
-```
-
+### Daily distribution
 
 ```{r}
 activity %>%
@@ -135,101 +118,21 @@ activity %>%
 	group_by(minute_in_day, day_in_week) %>%
 	summarize(total_activity = sum(counts)) %>%
 	ggplot(aes(x = minute_in_day, y = total_activity, color = day_in_week)) +
-	  geom_line() +
+	  geom_point() +
 	  facet_grid(. ~ day_in_week) 
+```
 
-# percentage of time remains sedentary during certain time in a day
-activity %>%
-	# grouping to get number of a type of activity
-	group_by(minute_in_day, day_in_week, activity_type) %>%
-	summarize(n_of_activity = n()) %>%
-	# use 0 to fill blank cell
-	spread(key = activity_type, value = n_of_activity, fill = 0) %>% 
-	mutate(prop_active = active / (sedentary + active)) %>% 
-	ggplot(aes(x = minute_in_day, y = prop_active)) +
-	  geom_line() +
-	  geom_smooth() +
-	  facet_grid(. ~ day_in_week)
+### Supplementary material
 
-
-
-
-
-# across a day
-activity %>%
-	# group by the minute in a day and type of activity
-	group_by(minute_in_day, activity_type) %>%
-	# sum of activities for the same minute over all days
-	summarize(sum_activity = sum(counts)) %>%
-	#normalize against mean of group total activities
-	group_by(activity_type) %>% 
-	mutate(group_mean = mean(sum_activity)) %>%
-	# normalize against the average of each type of activities
-	ggplot(aes(x = minute_in_day, y = sum_activity / group_mean, color = activity_type)) +
-	  geom_line()
-# 
-# # across day + week, mean
-# activity %>%
-# 	group_by(minute_in_day, day_of_week, activity_type) %>% 
-# 	summarize(sum_activity = sum(counts)) %>%
-# 	group_by(activity_type) %>% 
-# 	# get mean of sum_activity for each group for normalization
-# 	mutate(group_mean = mean(sum_activity)) %>% 
-# 	ggplot(aes(x = time_activity, y = sum_activity / group_mean, color = range_accel)) +
-# 	  geom_line() +
-# 	  facet_grid(range_accel ~ day)
-
-
-# 
-# acc %>%
-# 	ggplot(aes(x = time_activity, y = week, color = log10(accel))) +
-# 	  geom_point(size = 0.1, alpha = 0.5) +
-# 	  facet_grid(day ~ .) +
-# 	  viridis::scale_color_viridis(
-# 	  	name = "Location",
-# 	  	discrete = FALSE
-# 	  )
-# 
-# # across day of the period
-# acc %>%
-# 	group_by(day_of_period, day, range_accel) %>% 
-# 	summarize(sum_activity = sum(accel)) %>% 
-# 	group_by(range_accel) %>% 
-# 	# mean of sum of group
-# 	mutate(group_mean = mean(sum_activity)) %>%
-# 	ggplot(aes(x = day_of_period, y = sum_activity / group_mean, color = range_accel)) +
-# 	  geom_line() +
-# 	  geom_smooth() +
-# 	  facet_grid(range_accel ~ .)
-# 
-# # across week
-# acc %>%
-# 	group_by(day, range_accel) %>%
-# 	summarize(sum_activity = sum(accel)) %>%
-# 	group_by(range_accel) %>% 
-# 	mutate(group_mean = mean(sum_activity)) %>% 
-# 	ggplot(aes(x = day, y = sum_activity / group_mean, group = range_accel, color = range_accel)) +
-# 	  geom_line()
-# 
-# # across week, show the distribution of activities for each day in a week
-# acc %>%
-# 	ggplot(aes(y = log(accel), color = day)) +
-# 	  geom_boxplot() +
-# 	  facet_grid(range_accel ~ .)
-# 
-# 
-# # across day of the period + week, mean
-# acc %>%
-# 	group_by(day_of_period, day, range_accel) %>% 
-# 	summarize(sum_activity = sum(accel)) %>%
-# 	group_by(range_accel) %>% 
-# 	# get mean of sum_activity for each group for normalization
-# 	mutate(group_mean = mean(sum_activity)) %>% 
-# 	ggplot(aes(x = day_of_period, y = sum_activity / group_mean, color = range_accel)) +
-# 	  geom_line() +
-# 	  geom_smooth() +
-# 	  facet_grid(range_accel ~ day)
+```{r}
+# some feature days
+activity %>% 
+  filter(day %in% c(0, 55, 92, 107:108, 185, 243, 244, 300)) %>%
+	ggplot(aes(y = log10(counts), x = minute_in_day, color = as.factor(day))) +
+	  geom_point(size = 0.5) +
+	  facet_grid(day ~ .)
 
 
 ```
+
 
