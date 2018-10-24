@@ -63,23 +63,36 @@ activity_day_total <- activity %>%
 	group_by(day, day_in_week, week) %>% 
   summarize(day_total = sum(counts))
 
+# the distribution of total activity in a day looks as this. However, there are some outliers that should not include in 
+
+library(patchwork)
+
+activity_day_total %>% 
+  group_by(outliers = day_total > 100000) %>%
+	ggplot(aes(x = day_total)) +
+	  geom_density() +
+	  coord_flip()
+
 # day total counts over time
 activity_day_total %>%
-	ggplot(aes(x = day, y = day_total)) +
-	  geom_point(aes(color = day_in_week)) +
-	  geom_smooth(method = lm)
+	group_by(outliers = day_total > 100000) %>%
+	ggplot(aes(x = day, y = day_total, shape = outliers)) +
+	  geom_point(size = 2) +
+	  geom_smooth(method = "lm")
 
-# distribution of day total in every day in week
-activity_day_total %>%
-	ggplot(aes(x = day_in_week, y = day_total)) +
-	  geom_boxplot()
+
+summary(lm(day ~ day_total, data = activity_day_total %>% filter(day_total > 100000)))
 
 # across week, show the distribution of activities for each day in a week
 activity_day_total %>%
-	ggplot(aes(y = day_total, x = day, color = day_in_week)) +
-	  geom_point() +
-	  geom_smooth() +
+	filter(day_total > 100000) %>% 
+	ggplot(aes(y = day_total, x = day, group = day_in_week)) +
+	  geom_boxplot() +
+	  geom_point(aes(color = day_in_week)) +
+	  geom_smooth(alpha = 0.3) +
 	  facet_grid(. ~ day_in_week)
+
+
 
 ```
 (add some statistical parts)
@@ -111,14 +124,17 @@ activity %>%
 	group_by(minute_in_day, day_in_week) %>%
 	summarize(total_activity = sum(counts)) %>%
 	ggplot(aes(x = minute_in_day, y = total_activity, color = day_in_week)) +
-	  geom_point()
+	  geom_point(size = 0.6) +
+	  geom_smooth()
+
 
 activity %>%
 	# grouping to get number of a type of activity
 	group_by(minute_in_day, day_in_week) %>%
 	summarize(total_activity = sum(counts)) %>%
 	ggplot(aes(x = minute_in_day, y = total_activity, color = day_in_week)) +
-	  geom_point() +
+	  geom_point(size = 0.2) +
+	  geom_smooth() +
 	  facet_grid(. ~ day_in_week) 
 ```
 
@@ -127,10 +143,11 @@ activity %>%
 ```{r}
 # some feature days
 activity %>% 
-  filter(day %in% c(0, 55, 92, 107:108, 185, 243, 244, 300)) %>%
+  filter(day %in% c(0, 49, 55, 92, 107:108, 185, 243, 244, 300)) %>%
 	ggplot(aes(y = log10(counts), x = minute_in_day, color = as.factor(day))) +
 	  geom_point(size = 0.5) +
 	  facet_grid(day ~ .)
+
 
 
 ```
