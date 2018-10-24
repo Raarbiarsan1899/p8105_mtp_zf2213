@@ -68,7 +68,7 @@ After tidying, each row records the `r colnames(activity)` of an activity of a m
 
 ### The total activity in each day
 
-```{r}
+```{r scatterplot_day_total}
 activity_day_total <- activity %>% 
 # aggregate across minutes to create total activity
 	group_by(day, day_in_week, week) %>% 
@@ -131,7 +131,7 @@ Null hypothesis: slope is 0.
 Alternative hypothesis: slope is not equal to 0.
 Significance level: 0.01.
 
-```{r}
+```{r linear_regression}
 # get linear regression analysis
 (stats_day_total <- summary(lm(day ~ day_total,
 		 data = activity_day_total %>% filter(day_total > 100000))))
@@ -140,36 +140,52 @@ Significance level: 0.01.
 
 The p-value of correlation of total activities over time is `r round(stats_day_total$coefficients[2, 4], 6)`. So at 0.01 significance level, we have enough evidence to reject the null hypothesis and conclude that the patient became more active over time.
 
+### The effect of days in a week on total activities.
 
-
-```{r}
+```{r scatterplot_days_of_week}
 # across week, show the distribution of activities for each day in a week
 activity_day_total %>%
   # remove outliers
 	filter(day_total > 100000) %>% 
+	# boxplot of days in week
 	ggplot(aes(y = day_total, x = day, group = day_in_week)) +
+	  # boxplot
 	  geom_boxplot() +
+	  # scatterplot
 	  geom_point(aes(color = day_in_week)) +
+	  # linear regression line
 	  geom_smooth(method = lm) +
-	  facet_grid(. ~ day_in_week)
+	  # activity for each day in week
+	  facet_grid(. ~ day_in_week) +
+    scale_y_continuous(labels = scales::comma) +
+	  labs(
+	  	x = "Day",
+	  	y = "Total activity in the days"
+	  )
 
 ```
 
+The increases of active during Friday, Saturday and Sunday over time are more significant that that of other days in the week. But the trends are all the same.
 
+### Activities over the course of the day
 
-### Activities over a day
-
-```{r}
+```{r heatmap}
 # display 24-hour profile for each day using 2d density plot
 activity %>%
+	# using heatmap to show every minute of each day
 	ggplot(aes(y = minute_in_day / 60, x = day, color = log10(counts))) +
+	  # heatmap
 	  geom_point(size = 0.1, alpha = 0.5) +
+	  # label special days
 	  scale_x_continuous(breaks = c(1, 49, 55, 92, 108, 185, 243, 259, 300, 329)) +
-		scale_y_continuous(breaks = c(0, 8, 16, 24)) +
+		# hours in the days
+	  scale_y_continuous(breaks = c(0, 8, 16, 24)) +
+	  # palette
 	  viridis::scale_color_viridis(
 	  	name = "Activity Intensity",
 	  	discrete = FALSE
 	  ) +
+	  # labels and themes
 	  labs(
 	  	y = "Time (hour)",
 	  	x = "Day (with special days labelled)"
@@ -181,6 +197,9 @@ activity %>%
 # refer to supplementary material for special days
 ```
 
+The patient are active during days and sedatory during night. He seems to live a regular life.
+
+Regarding the data, there seem to be some blackout days, which means the accelerometers did not record anything, and some days with extremely low variance. Refer to supplementary material for more information.
 
 
 ### Daily distribution
