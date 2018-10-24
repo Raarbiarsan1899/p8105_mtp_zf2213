@@ -112,7 +112,8 @@ scatter_total <- activity_day_total %>%
 	  geom_smooth(method = "lm", aes(linetype = abnormal_day), color = "black", show.legend = FALSE, se = FALSE) +
 	  # labels, ticks, axis, titles, etc...
 	  scale_linetype_manual(values = c(1, 0)) +
-	  labs(x = "Day", color = "Abnormal Days", fill = "Abnormal Day") +
+	  labs(x = "Day", color = "Abnormal Days", fill = "Abnormal Day",
+	  		 title = "Figure.1 Total daily activity over time") +
 	  theme(
 	   axis.ticks.y = element_blank(),
 	   axis.title.y = element_blank(),
@@ -138,7 +139,7 @@ Significance level: 0.01.
 
 ```
 
-The p-value of correlation of total activities over time is `r round(stats_day_total$coefficients[2, 4], 6)`. So at 0.01 significance level, we have enough evidence to reject the null hypothesis and conclude that the patient became more active over time.
+The p-value of correlation of total activities over time is `r format(stats_day_total$coefficients[2, 4], scientific = FALSE)`. So at 0.01 significance level, we have enough evidence to reject the null hypothesis and conclude that the patient became more active over time.
 
 ### The effect of days in a week on total activities.
 
@@ -160,7 +161,9 @@ activity_day_total %>%
     scale_y_continuous(labels = scales::comma) +
 	  labs(
 	  	x = "Day",
-	  	y = "Total activity in the days"
+	  	y = "Total activity in the days",
+	  	title = "Figure.2 Activity of days in the week",
+	  	color = "Day in week"
 	  )
 
 ```
@@ -173,7 +176,7 @@ The increases of active during Friday, Saturday and Sunday over time are more si
 # display 24-hour profile for each day using 2d density plot
 activity %>%
 	# using heatmap to show every minute of each day
-	ggplot(aes(y = minute_in_day / 60, x = day, color = log10(counts))) +
+	ggplot(aes(y = minute_in_day / 60, x = day, color = log(counts, 2))) +
 	  # heatmap
 	  geom_point(size = 0.1, alpha = 0.5) +
 	  # label special days
@@ -182,60 +185,79 @@ activity %>%
 	  scale_y_continuous(breaks = c(0, 8, 16, 24)) +
 	  # palette
 	  viridis::scale_color_viridis(
-	  	name = "Activity Intensity",
+	  	name = "log2 Transformed Activity Intensity",
+	  	option = "inferno",
 	  	discrete = FALSE
 	  ) +
 	  # labels and themes
 	  labs(
 	  	y = "Time (hour)",
-	  	x = "Day (with special days labelled)"
+	  	x = "Day (with special days labelled)",
+	  	title = "Figure.3 Heatmap of 24-hour activity profile for each day"
 	  ) +
 	  theme(
-	  	axis.text.x = element_text(color = "red", angle = 45)
+	  	axis.text.x = element_text(color = "red", angle = 45),
+	  	legend.position = "bottom"
 	  )
 
-# refer to supplementary material for special days
 ```
 
 The patient are active during days and sedatory during night. He seems to live a regular life.
 
-Regarding the data, there seem to be some blackout days, which means the accelerometers did not record anything, and some days with extremely low variance. Refer to supplementary material for more information.
+Regarding the data, there seem to be some "special" days (as mentioned in Figure.1), and some days with extremely low variance. Refer to supplementary material for more information.
 
 
 ### Daily distribution
 
-```{r}
+```{r 24hour_day_in_week}
 activity %>%
 	# grouping to get number of a type of activity
 	group_by(minute_in_day, day_in_week) %>%
+	# get group total (adding the total activity of a single time point in a day across all days would be less sensitive to missing values)
 	summarize(total_activity = sum(counts)) %>%
+	# plot scatterplot and smoothline 
 	ggplot(aes(x = minute_in_day / 60, y = total_activity, color = day_in_week)) +
+	  # scatterplot
 	  geom_point(size = 1, alpha = 0.6) +
+	  # add smoothline
 	  geom_smooth(color = "black", linetype = 1) +
+	  # labels and axises
 	  scale_x_continuous(breaks = c(0, 8, 16, 24)) +
 	  scale_y_continuous(labels = scales::comma) +
 	  labs(
 	  	x = "Time (hour)",
 	  	y = "Total Counts",
-	  	color = "Day in Week"
+	  	color = "Day in Week",
+	  	title = "Figure 4. 24-hour profile of different days in the week"
 	  ) + 
+	  # get the 24-hour profile for each day of the week
 	  facet_grid(. ~ day_in_week)
 ```
 
+The patient seems to be quite active during Friday and weekends. For some reasons, there are activity peaks during Thursday and Friday nights, and two peaks in Sundays.
+
 ## Discussion
+
+
 
 ## Supplementary material
 
 ```{r}
 # some feature days
 activity %>% 
+	# get some days as examples
   filter(day %in% c(0, 49, 55, 92, 107:108, 185, 243, 244, 259, 300)) %>%
+	# plot scatterplot for each days
 	ggplot(aes(y = log10(counts), x = minute_in_day / 60, color = as.factor(day))) +
+	  # scatterplot
 	  geom_point(size = 0.5) +
+	  # one plot for each day
 	  facet_grid(day ~ .) +
-	  labs(x = "Time (hour)", y = "log10 Transformed Counts", color = "Special Days")
-
-
+	  # labels
+	  labs(x = "Time (hour)",
+	  		 y = "log10 Transformed Counts",
+	  		 color = "Special Days",
+	  		 title = "Supplementary figure.1 Some typical day observations")
 
 ```
 
