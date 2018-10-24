@@ -14,8 +14,6 @@ knitr::opts_chunk$set(
  out.width = "100%"
 )
 
-options(scipen = FALSE)
-
 # ggplot2 tibble dplyr tidyr ... etc.
 library(tidyverse)
 
@@ -30,20 +28,19 @@ Accelerometers have been powerful tools to study personal activities over a long
 ## Data and Methods
 
 * Patient information
+
 The patient is a 63-year old male with BMI 25, who was diagnosed with congestive heart failure at Columbia University Medical Center. Consent from the patient is assumed since this information has already been public to whole class.
 
 * Methods
+
 The methods of this project are using simple r programming skills along with tidyverse packages to take a look at the activity distribution of days across whole period, within a day, and across days in a week. 
 
-### loading data
 
-Columns are values rather than variables, load data and gather the columns
+## Results
 
-The dataset records every minute in a day. There are in total 329 days.
+### Loading and tidying data
 
-(Write more about dataset, make variable name more reasonable)
-
-### Data tidying
+Columns are values rather than variables, so the first step to tidying is loading the data and gathering the columns into the minutes (epoch) of the days. Then rename some variables, make the variables with reasonable data type, arrange the columns and rows.
 
 ```{r loading_and_tidying, message = FALSE}
 # loading data and make to tall table
@@ -67,43 +64,53 @@ activity <- read_csv("./data/p8105_mtp_data.csv") %>%
 
 ```
 
-## Results
+After tidying, each row records the `r colnames(activity)` of an activity of a minute, there are in total `r nrow(activity)` minutes of `r max(activity$day)` days.
 
-### Across the day
+### The total activity in each day
 
 ```{r}
 activity_day_total <- activity %>% 
 # aggregate across minutes to create total activity
 	group_by(day, day_in_week, week) %>% 
+	# get total activity in the days
   summarize(day_total = sum(counts))
 
-# the distribution of total activity in a day looks as this. However, there are some outliers that should not include in 
-
+# necessary package to put two ggplot elements together
 library(patchwork)
 
+# density plot of distribution of total activity across days
 density_total <- activity_day_total %>% 
+	# label the outliers
   group_by(outliers = day_total > 100000) %>% 
+	# plot the density plot
 	ggplot(aes(x = day_total)) +
-	  geom_density(alpha = 0.3) +
+	  geom_density(fill = "white") +
+	  # draw a line to label the cutoff
 	  geom_vline(xintercept = 100000, linetype = 2) +
+	  # make coordinator flip
 	  coord_flip() +
+	  # label axis
 	  labs(
 	  	x = "Day total (counts)",
 	  	y = "Density"
 	  ) +
+	  # ticks labels (before flip)
 	  scale_x_continuous(labels = scales::comma) +
-	  theme(
-	  	axis.text.x = element_blank(),
-	  	axis.ticks.x = element_blank()
-	  )
+	  scale_y_continuous(breaks = c()) 
 
 # day total counts over time
 scatter_total <- activity_day_total %>%
+	# group by outliers
 	group_by(abnormal_day = day_total < 100000) %>%
+	# plot scatterplot
 	ggplot(aes(x = day, y = day_total, color = abnormal_day)) +
+	  # scatterplot
 	  geom_point(size = 2) +
+	  # draw a line for cutoff
 	  geom_hline(yintercept = 100000, linetype = 2) +
+	  # get regression line for the days (exclude outliers)
 	  geom_smooth(method = "lm", aes(linetype = abnormal_day), color = "black", show.legend = FALSE, se = FALSE) +
+	  # labels, ticks, axis, titles, etc...
 	  scale_linetype_manual(values = c(1, 0)) +
 	  labs(x = "Day", color = "Abnormal Days", fill = "Abnormal Day") +
 	  theme(
@@ -112,22 +119,33 @@ scatter_total <- activity_day_total %>%
 	   axis.text.y = element_blank()
 	  )
 
-density_total + scatter_total
+# put two plots together
+density_total + scatter_total + plot_layout(widths = c(0.2, 1.8))
 ```
 
-As you can see in the 
+It turns out that in some days the total activity are extremely low, they are actually missing days (refer to supplementary material) of this time series observations. We can visually feel the daily total activity are increasing over time. For statistical analysis, it would be better removing NAs.
 
+### Linear regression
+
+Null hypothesis: slope is 0.
+Alternative hypothesis: slope is not equal to 0.
+Significance level: 0.01.
 
 ```{r}
-summary(lm(day ~ day_total,
-		 data = activity_day_total %>% filter(day_total > 100000)))
+# get linear regression analysis
+(stats_day_total <- summary(lm(day ~ day_total,
+		 data = activity_day_total %>% filter(day_total > 100000))))
+
 ```
+
+The p-value of correlation of total activities over time is `r round(stats_day_total$coefficients[2, 4], 6)`. So at 0.01 significance level, we have enough evidence to reject the null hypothesis and conclude that the patient became more active over time.
 
 
 
 ```{r}
 # across week, show the distribution of activities for each day in a week
 activity_day_total %>%
+  # remove outliers
 	filter(day_total > 100000) %>% 
 	ggplot(aes(y = day_total, x = day, group = day_in_week)) +
 	  geom_boxplot() +
