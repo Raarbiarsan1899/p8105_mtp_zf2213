@@ -24,7 +24,16 @@ library(tidyverse)
 
 ## Introduction
 
+Accelerometers have been powerful tools to study personal activities over a long period of days. Unlike traditional ways of analysis, which focus mainly on the total activity over the day, analyzing activity over the course of the day can provide us more detailed information about the behaviours of the individuals, thus valuable healthcare information. This project aims at using both ways to analyse the accelerometer records of a congestive heart failure (CHF) patient, trying to wrangle valuable behaviour information about the patient.
 
+
+## Data and Methods
+
+* Patient information
+The patient is a 63-year old male with BMI 25, who was diagnosed with congestive heart failure at Columbia University Medical Center. Consent from the patient is assumed since this information has already been public to whole class.
+
+* Methods
+The methods of this project are using simple r programming skills along with tidyverse packages to take a look at the activity distribution of days across whole period, within a day, and across days in a week. 
 
 ### loading data
 
@@ -36,7 +45,7 @@ The dataset records every minute in a day. There are in total 329 days.
 
 ### Data tidying
 
-```{r loading_and_tidying}
+```{r loading_and_tidying, message = FALSE}
 # loading data and make to tall table
 activity <- read_csv("./data/p8105_mtp_data.csv") %>% 
 	# gather into long table
@@ -58,6 +67,8 @@ activity <- read_csv("./data/p8105_mtp_data.csv") %>%
 
 ```
 
+## Results
+
 ### Across the day
 
 ```{r}
@@ -73,7 +84,6 @@ library(patchwork)
 density_total <- activity_day_total %>% 
   group_by(outliers = day_total > 100000) %>% 
 	ggplot(aes(x = day_total)) +
-	  geom_histogram(aes(y = ..density..),fill = "white", color = "black") + 
 	  geom_density(alpha = 0.3) +
 	  geom_vline(xintercept = 100000, linetype = 2) +
 	  coord_flip() +
@@ -95,13 +105,11 @@ scatter_total <- activity_day_total %>%
 	  geom_hline(yintercept = 100000, linetype = 2) +
 	  geom_smooth(method = "lm", aes(linetype = abnormal_day), color = "black", show.legend = FALSE, se = FALSE) +
 	  scale_linetype_manual(values = c(1, 0)) +
-	  labs(x = "Day", color = "Abnormal Days") +
-	  labs(fill = "Abnormal Day") +
+	  labs(x = "Day", color = "Abnormal Days", fill = "Abnormal Day") +
 	  theme(
 	   axis.ticks.y = element_blank(),
 	   axis.title.y = element_blank(),
-	   axis.text.y = element_blank(),
-	   legend.title = element_text()
+	   axis.text.y = element_blank()
 	  )
 
 density_total + scatter_total
@@ -124,7 +132,7 @@ activity_day_total %>%
 	ggplot(aes(y = day_total, x = day, group = day_in_week)) +
 	  geom_boxplot() +
 	  geom_point(aes(color = day_in_week)) +
-	  geom_smooth(alpha = 0.3) +
+	  geom_smooth(method = lm) +
 	  facet_grid(. ~ day_in_week)
 
 ```
@@ -136,12 +144,20 @@ activity_day_total %>%
 ```{r}
 # display 24-hour profile for each day using 2d density plot
 activity %>%
-	ggplot(aes(y = minute_in_day, x = day, color = log10(counts))) +
+	ggplot(aes(y = minute_in_day / 60, x = day, color = log10(counts))) +
 	  geom_point(size = 0.1, alpha = 0.5) +
-	  scale_x_continuous(breaks = c(1, 55, 92, 107, 185, 243, 300, 329)) +
+	  scale_x_continuous(breaks = c(1, 49, 55, 92, 108, 185, 243, 259, 300, 329)) +
+		scale_y_continuous(breaks = c(0, 8, 16, 24)) +
 	  viridis::scale_color_viridis(
-	  	name = "Location",
+	  	name = "Activity Intensity",
 	  	discrete = FALSE
+	  ) +
+	  labs(
+	  	y = "Time (hour)",
+	  	x = "Day (with special days labelled)"
+	  ) +
+	  theme(
+	  	axis.text.x = element_text(color = "red", angle = 45)
 	  )
 
 # refer to supplementary material for special days
@@ -156,30 +172,31 @@ activity %>%
 	# grouping to get number of a type of activity
 	group_by(minute_in_day, day_in_week) %>%
 	summarize(total_activity = sum(counts)) %>%
-	ggplot(aes(x = minute_in_day, y = total_activity, color = day_in_week)) +
-	  geom_point(size = 0.6) +
-	  geom_smooth()
-
-
-activity %>%
-	# grouping to get number of a type of activity
-	group_by(minute_in_day, day_in_week) %>%
-	summarize(total_activity = sum(counts)) %>%
-	ggplot(aes(x = minute_in_day, y = total_activity, color = day_in_week)) +
-	  geom_point(size = 0.2) +
-	  geom_smooth() +
-	  facet_grid(. ~ day_in_week) 
+	ggplot(aes(x = minute_in_day / 60, y = total_activity, color = day_in_week)) +
+	  geom_point(size = 1, alpha = 0.6) +
+	  geom_smooth(color = "black", linetype = 1) +
+	  scale_x_continuous(breaks = c(0, 8, 16, 24)) +
+	  scale_y_continuous(labels = scales::comma) +
+	  labs(
+	  	x = "Time (hour)",
+	  	y = "Total Counts",
+	  	color = "Day in Week"
+	  ) + 
+	  facet_grid(. ~ day_in_week)
 ```
 
-### Supplementary material
+## Discussion
+
+## Supplementary material
 
 ```{r}
 # some feature days
 activity %>% 
   filter(day %in% c(0, 49, 55, 92, 107:108, 185, 243, 244, 259, 300)) %>%
-	ggplot(aes(y = log10(counts), x = minute_in_day, color = as.factor(day))) +
+	ggplot(aes(y = log10(counts), x = minute_in_day / 60, color = as.factor(day))) +
 	  geom_point(size = 0.5) +
-	  facet_grid(day ~ .)
+	  facet_grid(day ~ .) +
+	  labs(x = "Time (hour)", y = "log10 Transformed Counts", color = "Special Days")
 
 
 
