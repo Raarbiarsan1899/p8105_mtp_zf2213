@@ -67,19 +67,20 @@ activity_day_total <- activity %>%
 
 library(patchwork)
 
-activity_day_total %>% 
+density_total <- activity_day_total %>% 
   group_by(outliers = day_total > 100000) %>%
 	ggplot(aes(x = day_total)) +
 	  geom_density() +
 	  coord_flip()
 
 # day total counts over time
-activity_day_total %>%
+scatter_total <- activity_day_total %>%
 	group_by(outliers = day_total > 100000) %>%
 	ggplot(aes(x = day, y = day_total, shape = outliers)) +
 	  geom_point(size = 2) +
 	  geom_smooth(method = "lm")
 
+density_total + scatter_total
 
 summary(lm(day ~ day_total, data = activity_day_total %>% filter(day_total > 100000)))
 
