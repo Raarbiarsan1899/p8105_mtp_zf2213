@@ -168,7 +168,9 @@ activity_day_total %>%
 
 ```
 
-The increases of active during Friday, Saturday and Sunday over time are more significant that that of other days in the week. But the trends are all the same.
+The patient seems to be most active during Fridays and Sundays, and least during Tuesdays, according to the boxplot in Figure.2.
+
+The increases of active during Friday, Saturday and Sunday over time are more significant that that of other days in the week. But the trends are the same for each day in the week.
 
 ### Activities over the course of the day
 
@@ -176,9 +178,9 @@ The increases of active during Friday, Saturday and Sunday over time are more si
 # display 24-hour profile for each day using 2d density plot
 activity %>%
 	# using heatmap to show every minute of each day
-	ggplot(aes(y = minute_in_day / 60, x = day, color = log(counts, 2))) +
+	ggplot(aes(y = minute_in_day / 60, x = day, color = log(counts, 10))) +
 	  # heatmap
-	  geom_point(size = 0.1, alpha = 0.5) +
+	  geom_point(size = 0.3, alpha = 0.5) +
 	  # label special days
 	  scale_x_continuous(breaks = c(1, 49, 55, 92, 108, 185, 243, 259, 300, 329)) +
 		# hours in the days
@@ -200,11 +202,15 @@ activity %>%
 	  	legend.position = "bottom"
 	  )
 
+
+activity %>%
+	ggplot(aes(x = counts)) + scale_x_log10(breaks = c(2, 4, 8, 16, 32)) + 
+	geom_density()
 ```
 
-The patient are active during days and sedatory during night. He seems to live a regular life.
+The patient are active during days and sedatory during night. He seems to live a regular life, and slightly more active during night than days.
 
-Regarding the data, there seem to be some "special" days (as mentioned in Figure.1), and some days with extremely low variance. Refer to supplementary material for more information.
+Regarding the data, there seem to be some missing days (as mentioned in Figure.1), and some "strange" days with extremely low variance. Refer to supplementary material for more information.
 
 
 ### Daily distribution
@@ -238,11 +244,11 @@ The patient seems to be quite active during Friday and weekends. For some reason
 
 ## Discussion
 
-
+To summarize, the accelerometer data provides observations of daily activity of a patient. Wrangling more sophisticated information from this dataset requires more advanced statistical learning knowledge and programming skills.
 
 ## Supplementary material
 
-```{r}
+```{r example_days}
 # some feature days
 activity %>% 
 	# get some days as examples
@@ -257,7 +263,8 @@ activity %>%
 	  labs(x = "Time (hour)",
 	  		 y = "log10 Transformed Counts",
 	  		 color = "Special Days",
-	  		 title = "Supplementary figure.1 Some typical day observations")
+	  		 title = "Supplementary figure.1 Some typical day observations",
+	  		 caption = "Missing days: 49, 55. Normal days: 259, 300. `Strange` days: 108, 243. Mix of different types: 92, 185, 244")
 
 ```
 
