@@ -40,7 +40,7 @@ The methods of this project are using simple r programming skills along with tid
 
 ### Loading and tidying data
 
-Columns are values rather than variables, so the first step to tidying is loading the data and gathering the columns into the minutes (epoch) of the days. Then rename some variables, make the variables with reasonable data type, arrange the columns and rows.
+Columns are values rather than variables, so the first step to tidying after loading is gathering the columns into the minutes of the days. Then rename some variables, make the variables with reasonable data type, and arrange the columns and rows.
 
 ```{r loading_and_tidying, message = FALSE}
 # loading data and make to tall table
@@ -54,9 +54,9 @@ activity <- read_csv("./data/p8105_mtp_data.csv") %>%
 	# make day in week variable factor and relevel the day variable
 	rename(day_in_week = day) %>%
 	mutate(day_in_week = forcats::fct_relevel(day_in_week, c("Sunday", "Monday",
-																													 "Tuesday", "Wednesday",
-																													 "Thursday", "Friday",
-																													 "Saturday"))) %>% 
+    "Tuesday", "Wednesday",
+    "Thursday", "Friday",
+    "Saturday"))) %>% 
 	# assuming the start of the first week is Sunday
 	mutate(day = (week - 1) * 7 + as.integer(day_in_week)) %>% 
 	# arrange the variable
@@ -124,7 +124,7 @@ scatter_total <- activity_day_total %>%
 density_total + scatter_total + plot_layout(widths = c(0.2, 1.8))
 ```
 
-It turns out that in some days the total activity are extremely low, they are actually missing days (refer to supplementary material) of this time series observations. We can visually feel the daily total activity are increasing over time. For statistical analysis, it would be better removing NAs.
+It turns out that in some days the total activity are extremely low, they are actually missing days. We can visually feel the daily total activity are increasing over time. For statistical analysis, it would be better to remove NAs before proceeding.
 
 ### Linear regression
 
@@ -168,9 +168,9 @@ activity_day_total %>%
 
 ```
 
-The patient seems to be most active during Fridays and Sundays, and least during Tuesdays, according to the boxplot in Figure.2.
+The patient seems to be most active during Fridays and Sundays, and least during Tuesdays.
 
-The increases of active during Friday, Saturday and Sunday over time are more significant that that of other days in the week. But the trends are the same for each day in the week.
+The increases of active during Friday, Saturday and Sunday over time are more significant that that of the other days in the week, but the trends are all the same.
 
 ### Activities over the course of the day
 
@@ -202,15 +202,11 @@ activity %>%
 	  	legend.position = "bottom"
 	  )
 
-
-activity %>%
-	ggplot(aes(x = counts)) + scale_x_log10(breaks = c(2, 4, 8, 16, 32)) + 
-	geom_density()
 ```
 
-The patient are active during days and sedatory during night. He seems to live a regular life, and slightly more active during night than days.
+The patient are active during days and sedatory during night. He seems to live a regular life.
 
-Regarding the data, there seem to be some missing days (as mentioned in Figure.1), and some "strange" days with extremely low variance. Refer to supplementary material for more information.
+There seem to be some missing days and some "strange" days with extremely low variance. Refer to supplementary material for more information.
 
 
 ### Daily distribution
@@ -244,7 +240,7 @@ The patient seems to be quite active during Friday and weekends. For some reason
 
 ## Discussion
 
-To summarize, the accelerometer data provides observations of daily activity of a patient. Wrangling more sophisticated information from this dataset requires more advanced statistical learning knowledge and programming skills.
+To summarize, the accelerometer data provides observations of many aspects of daily activity of a patient. Wrangling more sophisticated information from this dataset requires more advanced statistics knowledge and programming skills.
 
 ## Supplementary material
 
